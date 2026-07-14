@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface EditPersonDialogProps {
-  person: Person | null;
-  onSave: (personId: string, values: EditPersonFormValues) => Promise<void>;
+  person?: Person | null;
+  onSave: (personId: string | null, values: EditPersonFormValues) => Promise<void>;
   onClose: () => void;
 }
 
@@ -27,6 +27,9 @@ export function EditPersonDialog({
     formState: { errors, isSubmitting },
   } = useForm<EditPersonFormValues>({
     resolver: zodResolver(editPersonSchema),
+    defaultValues: {
+      gender: "male",
+    },
   });
 
   useEffect(() => {
@@ -43,12 +46,12 @@ export function EditPersonDialog({
     }
   }, [person, reset]);
 
-  if (!person) return null;
-
   const onSubmit = async (values: EditPersonFormValues) => {
-    await onSave(person.id, values);
+    await onSave(person?.id ?? null, values);
     onClose();
   };
+
+  const isEditing = !!person;
 
   return (
     <>
@@ -58,15 +61,20 @@ export function EditPersonDialog({
           className={cn(
             "bg-white rounded-2xl shadow-2xl w-full max-w-md",
             "border border-slate-200",
-            "animate-in fade-in-0 zoom-in-95 duration-200",
+            "animate-in fade-in zoom-in-95 duration-200",
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900">
-              Edit person
-            </h2>
+          <div className="flex items-center justify-between p-6 border-b border-slate-100">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">
+                {isEditing ? "Edit Person Details" : "Start Family Tree"}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                {isEditing ? "Update the information for this family member." : "Add the very first person to this tree."}
+              </p>
+            </div>
             <button
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400"

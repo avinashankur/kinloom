@@ -37,18 +37,20 @@ const layoutEngine = new GenealogyLayoutEngine();
 
 interface FamilyTreeCanvasInnerProps {
   snapshot: FamilyTreeSnapshot;
-  onAddRelationship: (personId: string) => void;
+  onAddPerson: () => void;
+  onAddRelationship: (personId: string, type?: "parent" | "child" | "spouse") => void;
   onEdit: (personId: string) => void;
   onDelete: (personId: string) => void;
 }
 
 function FamilyTreeCanvasInner({
   snapshot,
+  onAddPerson,
   onAddRelationship,
   onEdit,
   onDelete,
 }: FamilyTreeCanvasInnerProps) {
-  const { fitView, setCenter } = useReactFlow();
+  const { fitView, setCenter, zoomIn, zoomOut } = useReactFlow();
   const {
     activePersonId,
     setActivePerson,
@@ -100,6 +102,59 @@ function FamilyTreeCanvasInner({
       setTimeout(() => fitView({ duration: 600, padding: 0.15 }), 50);
     }
   }, [isLayoutReady, fitView]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore shortcuts if the user is typing in an input field (like a dialog)
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const { activePersonId, setActivePerson } = useTreeUIStore.getState();
+
+      // Canvas / global shortcuts
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        zoomIn({ duration: 200 });
+      } else if (e.key === "-") {
+        e.preventDefault();
+        zoomOut({ duration: 200 });
+      } else if (e.key === "f" || e.key === "0") {
+        e.preventDefault();
+        fitView({ duration: 600, padding: 0.15 });
+      }
+
+      // Active person shortcuts
+      if (activePersonId) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            onAddRelationship(activePersonId, "child");
+          } else if (e.ctrlKey || e.metaKey) {
+            onAddRelationship(activePersonId, "spouse");
+          } else {
+            onEdit(activePersonId);
+          }
+        } else if (e.key === "Delete" || e.key === "Backspace") {
+          e.preventDefault();
+          onDelete(activePersonId);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setActivePerson(null);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onEdit, onAddRelationship, onDelete, fitView, zoomIn, zoomOut]);
 
   // Center viewport on active person without reconstructing layout
   const prevActivePersonId = useRef<string | null>(null);
@@ -191,6 +246,27 @@ function FamilyTreeCanvasInner({
               onEdit={() => onEdit(activePersonId)}
               onDelete={() => onDelete(activePersonId)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Empty State Overlay */}
+      {snapshot.people.length === 0 && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#faf9f7] pointer-events-none">
+          <div className="pointer-events-auto text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-200 mb-4 text-slate-300">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">Blank Canvas</h2>
+            <p className="text-slate-500 mb-6 max-w-sm">
+              Your family tree is currently empty. Start by adding the very first person to begin mapping your genealogy.
+            </p>
+            <button
+              onClick={() => onAddPerson()}
+              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-full font-medium transition-colors shadow-sm"
+            >
+              Add First Person
+            </button>
           </div>
         </div>
       )}

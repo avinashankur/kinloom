@@ -28,11 +28,15 @@ export function TreePage() {
   const { activePersonId, detailsOpen, fullscreen } = useTreeUIStore();
 
   // Dialog state
+  const [isAddingPerson, setIsAddingPerson] = useState(false);
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [deletingPersonId, setDeletingPersonId] = useState<string | null>(null);
   const [addRelationshipPersonId, setAddRelationshipPersonId] = useState<
     string | null
   >(null);
+  const [addRelationshipType, setAddRelationshipType] = useState<
+    "parent" | "child" | "spouse" | undefined
+  >(undefined);
   const [isDeleting, setIsDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -64,6 +68,10 @@ export function TreePage() {
     snapshot?.people.find((p) => p.id === deletingPersonId) ?? null;
 
   // --- Handlers ---
+  const handleAddPerson = useCallback(() => {
+    setIsAddingPerson(true);
+  }, []);
+
   const handleEdit = useCallback((personId: string) => {
     setEditingPersonId(personId);
   }, []);
@@ -72,13 +80,36 @@ export function TreePage() {
     setDeletingPersonId(personId);
   }, []);
 
-  const handleAddRelationship = useCallback((personId: string) => {
+  const handleAddRelationship = useCallback((personId: string, type?: "parent" | "child" | "spouse") => {
     setAddRelationshipPersonId(personId);
+    setAddRelationshipType(type);
   }, []);
 
-  const handleEditSave = useCallback(
-    async (personId: string, values: EditPersonFormValues) => {
+  const handleAddPersonSave = useCallback(
+    async (_personId: string | null, values: EditPersonFormValues) => {
       if (!snapshot) return;
+      const { addPerson } = await import("@/application/family-tree/add-person");
+      const updated = await addPerson({
+        snapshot,
+        person: {
+          firstName: values.firstName,
+          lastName: values.lastName || undefined,
+          nickname: values.nickname || undefined,
+          gender: values.gender as "male" | "female",
+          birthDate: values.birthDate || undefined,
+          deathDate: values.deathDate || undefined,
+          notes: values.notes || undefined,
+        },
+      });
+      setSnapshot(updated);
+      setIsAddingPerson(false);
+    },
+    [snapshot, setSnapshot],
+  );
+
+  const handleEditSave = useCallback(
+    async (personId: string | null, values: EditPersonFormValues) => {
+      if (!snapshot || !personId) return;
       const updated = await editPerson({
         snapshot,
         personId,
@@ -143,6 +174,7 @@ export function TreePage() {
       }
       setSnapshot(updated);
       setAddRelationshipPersonId(null);
+      setAddRelationshipType(undefined);
     },
     [snapshot, addRelationshipPersonId, setSnapshot],
   );
@@ -244,6 +276,7 @@ export function TreePage() {
       <div className="flex-1 relative overflow-hidden">
         <FamilyTreeCanvas
           snapshot={snapshot}
+          onAddPerson={handleAddPerson}
           onAddRelationship={handleAddRelationship}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -257,6 +290,13 @@ export function TreePage() {
       />
 
       <SearchCommand people={snapshot.people} />
+
+      {isAddingPerson && (
+        <EditPersonDialog
+          onSave={handleAddPersonSave}
+          onClose={() => setIsAddingPerson(false)}
+        />
+      )}
 
       {editingPersonId && (
         <EditPersonDialog
@@ -279,8 +319,12 @@ export function TreePage() {
         <AddRelationshipDialog
           personId={addRelationshipPersonId}
           snapshot={snapshot}
+          defaultType={addRelationshipType}
           onSave={handleAddRelationshipSave}
-          onClose={() => setAddRelationshipPersonId(null)}
+          onClose={() => {
+            setAddRelationshipPersonId(null);
+            setAddRelationshipType(undefined);
+          }}
         />
       )}
     </div>

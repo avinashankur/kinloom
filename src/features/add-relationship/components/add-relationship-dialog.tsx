@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface AddRelationshipDialogProps {
   personId: string;
   snapshot: FamilyTreeSnapshot;
+  defaultType?: "parent" | "child" | "spouse";
   onSave: (values: AddRelationshipFormValues, parentIds?: string[]) => Promise<void>;
   onClose: () => void;
 }
@@ -26,10 +27,11 @@ const RELATIONSHIP_TYPES = [
 export function AddRelationshipDialog({
   personId,
   snapshot,
+  defaultType,
   onSave,
   onClose,
 }: AddRelationshipDialogProps) {
-  const [step, setStep] = useState<"type" | "form">("type");
+  const [step, setStep] = useState<"type" | "form">(defaultType ? "form" : "type");
   const currentPerson = snapshot.people.find((p) => p.id === personId);
   const currentSpouse = getCurrentSpouse(personId, snapshot.partnerships);
   const currentSpousePerson = currentSpouse
@@ -52,7 +54,7 @@ export function AddRelationshipDialog({
   } = useForm<AddRelationshipFormValues>({
     resolver: zodResolver(addRelationshipSchema),
     defaultValues: {
-      relationshipType: "child",
+      relationshipType: defaultType ?? "child",
       gender: "male",
       partnershipStatus: "married",
       includeSpouseAsParent: !!currentSpouse,
