@@ -82,6 +82,7 @@ consistent convention (see "Consistency" below).
 
 ### Structure
 
+- All component files must use `kebab-case.tsx` naming convention. Do not use PascalCase or camelCase for component files.
 - Feature/domain folders, not type-based folders, at the top level.
 - A `shared/` (or `common/`) folder for truly cross-cutting code only —
   if two+ features need it, it graduates to `shared/`, not the other way

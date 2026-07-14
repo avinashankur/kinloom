@@ -6,6 +6,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Editable Body Font Sizes */
+  --text-body-lg: 1.0625rem; /* 17px */
+  --text-body-lg--line-height: 1.55;
+  --text-body-md: 0.9375rem; /* 15px */
+  --text-body-md--line-height: 1.55;
+  --text-body-sm: 0.8125rem; /* 13px */
+  --text-body-sm--line-height: 1.55;
+
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -38,25 +46,35 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
+  --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-lavender: var(--brand-lavender);
+  --color-brand-peach: var(--brand-peach);
+  --color-brand-ochre: var(--brand-ochre);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-coral: var(--brand-coral);
+  --color-canvas: var(--canvas);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-card: var(--surface-card);
+  --color-surface-strong: var(--surface-strong);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --background: #fffaf0;
+  --foreground: #0a0a0a;
+  --card: #f5f0e0;
+  --card-foreground: #0a0a0a;
+  --popover: #fffaf0;
+  --popover-foreground: #0a0a0a;
+  --primary: #1a3a3a;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -81,6 +99,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Clay Brand Colors */
+  --brand-pink: #ff4d8b;
+  --brand-teal: #1a3a3a;
+  --brand-lavender: #b8a4ed;
+  --brand-peach: #ffb084;
+  --brand-ochre: #e8b94a;
+  --brand-mint: #a4d4c5;
+  --brand-coral: #ff6b5a;
+  --canvas: #fffaf0;
+  --surface-soft: #faf5e8;
+  --surface-card: #f5f0e0;
+  --surface-strong: #ebe6d6;
 }
 
 .dark {
