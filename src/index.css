@@ -159,3 +159,14 @@
     @apply font-sans;
   }
 }
+
+/* Remove React Flow's default blue selection box on nodes */
+.react-flow__node.selected > div {
+  box-shadow: none !important;
+  outline: none !important;
+}
+.react-flow__node:focus,
+.react-flow__node:focus-visible {
+  outline: none !important;
+}
+

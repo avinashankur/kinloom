@@ -1,10 +1,14 @@
 import { createBrowserRouter } from "react-router-dom";
-import { LandingPage } from "@/features/landing/components/landing-page";
+import { HomePage } from "@/pages/home/home-page";
+import { TreePage } from "@/pages/tree/tree-page";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <LandingPage />,
+    element: <HomePage />,
   },
-  // We can add the /tree route here later
+  {
+    path: "/tree",
+    element: <TreePage />,
+  },
 ]);

@@ -1,5 +1,5 @@
 import { TopNav } from "@/shared/components/layout/top-nav";
-import { Footer } from "@/shared/components/layout/Footer";
+import { Footer } from "@/shared/components/layout/footer";
 import { HeroBand } from "./hero-band";
 import { FeatureGrid } from "./feature-grid";
 import { CtaBand } from "./cta-band";

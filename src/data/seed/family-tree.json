@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-14T00:00:00.000Z",
+  "tree": {
+    "id": "tree-001",
+    "name": "Avinash's Family Tree",
+    "createdAt": "2026-07-14T00:00:00.000Z",
+    "updatedAt": "2026-07-14T00:00:00.000Z"
+  },
+  "people": [
+    {
+      "id": "p-gf1",
+      "treeId": "tree-001",
+      "firstName": "Ramchandra",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1935-04-12",
+      "deathDate": "2010-11-03",
+      "notes": "Retired schoolteacher. Loved chess and classical music.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-gm1",
+      "treeId": "tree-001",
+      "firstName": "Savitri",
+      "lastName": "Sharma",
+      "gender": "female",
+      "birthDate": "1940-08-22",
+      "notes": "Skilled in classical dance and Bharatanatyam.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-gf2",
+      "treeId": "tree-001",
+      "firstName": "Suresh",
+      "lastName": "Nair",
+      "gender": "male",
+      "birthDate": "1938-01-30",
+      "deathDate": "2005-06-14",
+      "notes": "Was a civil engineer who built bridges across Kerala.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-gm2",
+      "treeId": "tree-001",
+      "firstName": "Lakshmi",
+      "lastName": "Nair",
+      "gender": "female",
+      "birthDate": "1942-03-05",
+      "deathDate": "2019-09-18",
+      "notes": "Known for her cooking and generosity.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-f1",
+      "treeId": "tree-001",
+      "firstName": "Vijay",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1965-07-19",
+      "notes": "Software engineer. Loves hiking and photography.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-m1",
+      "treeId": "tree-001",
+      "firstName": "Meena",
+      "lastName": "Sharma",
+      "gender": "female",
+      "birthDate": "1968-02-14",
+      "notes": "School principal. Passionate about education.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-uncle1",
+      "treeId": "tree-001",
+      "firstName": "Rajan",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1968-11-25",
+      "notes": "Vijay's younger brother. Runs a textile business.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-aunt1",
+      "treeId": "tree-001",
+      "firstName": "Priya",
+      "lastName": "Sharma",
+      "gender": "female",
+      "birthDate": "1972-09-10",
+      "notes": "Rajan's wife. Works as a fashion designer.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-self",
+      "treeId": "tree-001",
+      "firstName": "Avinash",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1993-05-08",
+      "notes": "Building this family tree app!",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-sib1",
+      "treeId": "tree-001",
+      "firstName": "Anjali",
+      "lastName": "Sharma",
+      "gender": "female",
+      "birthDate": "1996-12-03",
+      "notes": "Avinash's younger sister. Studying medicine.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-cousin1",
+      "treeId": "tree-001",
+      "firstName": "Rohan",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1998-03-22",
+      "notes": "Rajan's son. Aspiring cricketer.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-exwife",
+      "treeId": "tree-001",
+      "firstName": "Deepa",
+      "lastName": "Nair",
+      "gender": "female",
+      "birthDate": "1969-06-30",
+      "notes": "Vijay's first marriage, divorced in 1991.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "p-halfsibling",
+      "treeId": "tree-001",
+      "firstName": "Kiran",
+      "lastName": "Sharma",
+      "gender": "male",
+      "birthDate": "1991-04-15",
+      "notes": "Vijay's son from first marriage.",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    }
+  ],
+  "partnerships": [
+    {
+      "id": "ps-gp1",
+      "treeId": "tree-001",
+      "personAId": "p-gf1",
+      "personBId": "p-gm1",
+      "status": "widowed",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "ps-gp2",
+      "treeId": "tree-001",
+      "personAId": "p-gf2",
+      "personBId": "p-gm2",
+      "status": "widowed",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "ps-vijay-deepa",
+      "treeId": "tree-001",
+      "personAId": "p-f1",
+      "personBId": "p-exwife",
+      "status": "divorced",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "ps-vijay-meena",
+      "treeId": "tree-001",
+      "personAId": "p-f1",
+      "personBId": "p-m1",
+      "status": "married",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    },
+    {
+      "id": "ps-rajan-priya",
+      "treeId": "tree-001",
+      "personAId": "p-uncle1",
+      "personBId": "p-aunt1",
+      "status": "married",
+      "createdAt": "2026-07-14T00:00:00.000Z",
+      "updatedAt": "2026-07-14T00:00:00.000Z"
+    }
+  ],
+  "parentChildRelationships": [
+    { "id": "r-001", "treeId": "tree-001", "parentId": "p-gf1", "childId": "p-f1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-002", "treeId": "tree-001", "parentId": "p-gm1", "childId": "p-f1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-003", "treeId": "tree-001", "parentId": "p-gf1", "childId": "p-uncle1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-004", "treeId": "tree-001", "parentId": "p-gm1", "childId": "p-uncle1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-005", "treeId": "tree-001", "parentId": "p-f1", "childId": "p-halfsibling", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-006", "treeId": "tree-001", "parentId": "p-exwife", "childId": "p-halfsibling", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-007", "treeId": "tree-001", "parentId": "p-f1", "childId": "p-self", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-008", "treeId": "tree-001", "parentId": "p-m1", "childId": "p-self", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-009", "treeId": "tree-001", "parentId": "p-f1", "childId": "p-sib1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-010", "treeId": "tree-001", "parentId": "p-m1", "childId": "p-sib1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-011", "treeId": "tree-001", "parentId": "p-uncle1", "childId": "p-cousin1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-012", "treeId": "tree-001", "parentId": "p-aunt1", "childId": "p-cousin1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-013", "treeId": "tree-001", "parentId": "p-gf2", "childId": "p-m1", "createdAt": "2026-07-14T00:00:00.000Z" },
+    { "id": "r-014", "treeId": "tree-001", "parentId": "p-gm2", "childId": "p-m1", "createdAt": "2026-07-14T00:00:00.000Z" }
+  ]
+}
