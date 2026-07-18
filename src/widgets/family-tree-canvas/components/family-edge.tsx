@@ -5,10 +5,9 @@ interface FamilyEdgeData {
   edgeType?: "spouse" | "child";
   strokeColor?: string;
   isDashed?: boolean;
-  isBus?: boolean;
-  busY?: number;
-  busLeft?: number;
-  busRight?: number;
+  // siblingCXs: the center-X of every sibling of this child edge,
+  // used to compute the bus span live at render time.
+  siblingCXs?: number[];
 }
 
 function getData(raw: unknown): FamilyEdgeData {
@@ -74,11 +73,19 @@ export function FamilyEdge({ id, source, target, data: rawData }: EdgeProps) {
     const childTopY = tgtNode.position.y;
 
     const gap = childTopY - unionBottomY;
-    const busY = data.busY ?? unionBottomY + gap * 0.42;
-    const isBus = data.isBus ?? false;
+    // Bus Y is always computed fresh from live positions — avoids stale
+    // pre-computed values when the layout re-runs after a focus switch.
+    const busY = unionBottomY + gap * 0.42;
+
+    // siblingCXs includes this child's CX; if there are multiple siblings
+    // the bus must span from the leftmost to the rightmost.
+    const siblingCXs = data.siblingCXs ?? [childCX];
+    const isBus = siblingCXs.length > 1;
+    const busLeft = Math.min(...siblingCXs);
+    const busRight = Math.max(...siblingCXs);
 
     if (!isBus) {
-      // Single child or un-aligned: elbow routing
+      // Single child: direct vertical line (or elbow if not aligned)
       const aligned = Math.abs(unionCX - childCX) < 2;
       const d = aligned
         ? `M ${unionCX} ${unionBottomY} L ${childCX} ${childTopY}`
@@ -101,16 +108,13 @@ export function FamilyEdge({ id, source, target, data: rawData }: EdgeProps) {
       );
     }
 
-    // Multiple children — T-bus (each sibling edge draws the full bus; overlapping is fine)
-    const busLeft = data.busLeft ?? childCX;
-    const busRight = data.busRight ?? childCX;
-
+    // Multiple children — T-bus
     const d = [
-      `M ${unionCX} ${unionBottomY}`,   // start at union bottom
-      `L ${unionCX} ${busY}`,            // vertical stem to bus level
-      `M ${busLeft} ${busY}`,            // horizontal bus (full width)
+      `M ${unionCX} ${unionBottomY}`,
+      `L ${unionCX} ${busY}`,
+      `M ${busLeft} ${busY}`,
       `L ${busRight} ${busY}`,
-      `M ${childCX} ${busY}`,            // vertical drop to this child
+      `M ${childCX} ${busY}`,
       `L ${childCX} ${childTopY}`,
     ].join(" ");
 

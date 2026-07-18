@@ -249,7 +249,7 @@ function computeLayout(graph: LayoutGraph): PositionedGraph {
     // If pUnion is set but already placed → secondary spouse already positioned
   }
 
-  // ── find roots & kick off layout ─────────────────────────────────────────
+  // ── find roots & kick off layout ─────────────────────────────────────
   const rootIds = graph.nodes
     .filter(
       (n) =>
@@ -266,7 +266,76 @@ function computeLayout(graph: LayoutGraph): PositionedGraph {
       return sp[0] === id;
     });
 
-  rootIds.sort((a, b) => subtreeWidth(b) - subtreeWidth(a));
+  /**
+   * A "parentless spouse root" is a person who has no parents in this graph
+   * but whose primary-union partner DOES have a parent (parentUnionOf or
+   * directParentOf). Their position will be set naturally when the partner
+   * gets placed as a child of the partner's parental family. Sorting them
+   * last ensures the parental family is the main root and the couple ends
+   * up at the correct depth below the parents.
+   *
+   * Without this, A (parentless) could sort before PB1 (B's parent) and
+   * be placed at depth 0 alongside B — putting PB1/PB2 at the same row as B.
+   */
+  function isParentlessSpouseRoot(id: string): boolean {
+    const pu = primaryUnion(id);
+    if (!pu) return false;
+    const partner = (spousesOf.get(pu) ?? []).find((s) => s !== id);
+    return (
+      !!partner &&
+      (parentUnionOf.has(partner) || directParentOf.has(partner))
+    );
+  }
+
+  rootIds.sort((a, b) => {
+    const aDeferred = isParentlessSpouseRoot(a) ? 1 : 0;
+    const bDeferred = isParentlessSpouseRoot(b) ? 1 : 0;
+    if (aDeferred !== bDeferred) return aDeferred - bDeferred; // deferred last
+    return subtreeWidth(b) - subtreeWidth(a);                  // larger first
+  });
+
+
+  /**
+   * Compute how many generations deep a root person's spouse sits.
+   *
+   * Problem: when A has no parents but B does, both A and B end up as
+   * "roots" (no parentUnion). If we always start them at depth=0 they land
+   * on the same row as B's parents — the union-AB edge goes sideways.
+   *
+   * Solution: walk each root's primary-union spouse upward to count how many
+   * parent-union hops exist above them. That count is the depth offset we
+   * should start this root at so it sits at the same generation as its
+   * partner even though its own ancestry is hidden.
+   */
+  function inferRootDepth(personId: string): number {
+    const pu = primaryUnion(personId);
+    if (!pu) return 0;
+
+    // Find the OTHER spouse in this union
+    const spouses = spousesOf.get(pu) ?? [];
+    const partner = spouses.find((s) => s !== personId);
+    if (!partner) return 0;
+
+    // Walk upward through the partner's ancestry to count generations
+    let depth = 0;
+    let current: string | undefined = partner;
+    const visited = new Set<string>();
+    while (current && !visited.has(current)) {
+      visited.add(current);
+      const pUnion = parentUnionOf.get(current);
+      if (pUnion) {
+        depth++;
+        // Move to one of the parents of this union
+        const parents = spousesOf.get(pUnion) ?? [];
+        current = parents[0];
+      } else {
+        const directP = directParentOf.get(current);
+        if (directP) { depth++; current = directP; }
+        else break;
+      }
+    }
+    return depth;
+  }
 
   const rootWidths = rootIds.map(subtreeWidth);
   let rx = 0;
@@ -277,9 +346,11 @@ function computeLayout(graph: LayoutGraph): PositionedGraph {
     rx = rootWidths[0] / 2 + H_GAP;
   }
 
-  // Place all disconnected spouses or smaller trees to the right
+  // Place all secondary roots at their inferred depth so spouses without
+  // parents land on the same row as their partner, not at the top.
   for (let i = 1; i < rootIds.length; i++) {
-    place(rootIds[i], rx + rootWidths[i] / 2, 0);
+    const depth = inferRootDepth(rootIds[i]);
+    place(rootIds[i], rx + rootWidths[i] / 2, depth);
     rx += rootWidths[i] + H_GAP;
   }
 

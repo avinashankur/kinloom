@@ -3,7 +3,7 @@ import type { PositionedGraph } from "@/infrastructure/layout/tree-layout-engine
 import type { FamilyTreeSnapshot } from "@/entities/family-tree/model/family-tree";
 import { PERSON_W, PERSON_H, UNION_SIZE } from "../config/constants";
 
-// ── node data types ───────────────────────────────────────────────────────────
+
 export type PersonNodeData = {
   label: string;
   personId: string;
@@ -17,16 +17,12 @@ export type UnionNodeData = {
   status: "married" | "divorced" | "widowed";
 };
 
-// ── how far below the union node the horizontal bus sits ──────────────────────
-const BUS_OFFSET_RATIO = 0.42; // fraction of the gap: union-bottom → child-top
-
 /**
  * Final adapter: PositionedGraph → React Flow nodes + edges.
  *
  * Edges are typed as 'familyEdge' (custom renderer):
  *  - spouse edges  carry { edgeType: 'spouse', strokeColor, isDashed }
- *  - child  edges  carry { edgeType: 'child',  strokeColor, isDashed,
- *                          isBus, busY, busLeft, busRight }
+ *  - child  edges  carry { edgeType: 'child',  strokeColor, isDashed, siblingCXs }
  */
 export function toReactFlowGraph(
   positioned: PositionedGraph,
@@ -78,55 +74,23 @@ export function toReactFlowGraph(
     };
   });
 
-  // ── pre-compute bus data per union ────────────────────────────────────────
+  // ── pre-compute sibling center-X lists per union ─────────────────────────────────
+  // siblingCXs is position-independent (it encodes WHICH children belong to
+  // the same union) so it stays correct even when node positions are updated
+  // by a subsequent layout pass.  FamilyEdge reads live positions from
+  // getNode() and computes busY / busLeft / busRight from them at render time.
   const nodeById = new Map(positioned.nodes.map((n) => [n.id, n]));
 
-  // group child edges (union → person) by their source union
-  interface BusGroup {
-    edgeIds: string[];
-    childCXs: number[];
-    childTopY: number;
-    unionBottomY: number;
-  }
-  const busGroups = new Map<string, BusGroup>();
+  /** unionId → [centerX, …] of every child of that union */
+  const siblingCXsByUnion = new Map<string, number[]>();
 
   for (const e of positioned.edges) {
     const src = nodeById.get(e.sourceId);
     const tgt = nodeById.get(e.targetId);
     if (src?.kind !== "union" || tgt?.kind !== "person") continue;
-
-    if (!busGroups.has(e.sourceId)) {
-      busGroups.set(e.sourceId, {
-        edgeIds: [],
-        childCXs: [],
-        childTopY: tgt.y,
-        unionBottomY: src.y + UNION_SIZE,
-      });
-    }
-    const g = busGroups.get(e.sourceId)!;
-    g.edgeIds.push(e.id);
-    g.childCXs.push(tgt.x + PERSON_W / 2);
-    // childTopY is the same for all siblings (same generation)
-  }
-
-  // edge-id → bus payload
-  const busPayload = new Map<string, {
-    isBus: boolean;
-    busY: number;
-    busLeft: number;
-    busRight: number;
-  }>();
-
-  for (const [, g] of busGroups) {
-    const gap = g.childTopY - g.unionBottomY;
-    const busY = g.unionBottomY + gap * BUS_OFFSET_RATIO;
-    const busLeft = Math.min(...g.childCXs);
-    const busRight = Math.max(...g.childCXs);
-    const isBus = g.childCXs.length > 1;
-
-    for (const eid of g.edgeIds) {
-      busPayload.set(eid, { isBus, busY, busLeft, busRight });
-    }
+    const list = siblingCXsByUnion.get(e.sourceId) ?? [];
+    list.push(tgt.x + PERSON_W / 2);
+    siblingCXsByUnion.set(e.sourceId, list);
   }
 
   // ── edges ──────────────────────────────────────────────────────────────────
@@ -177,28 +141,26 @@ export function toReactFlowGraph(
 
     if (isFromUnion) {
       // Child edge: union → person
-      const bus = busPayload.get(e.id) ?? {
-        isBus: false,
-        busY: 0,
-        busLeft: 0,
-        busRight: 0,
-      };
+      // Pass siblingCXs so FamilyEdge can compute the bus span live from
+      // up-to-date node positions (avoids stale pre-computed coordinates).
+      const siblingCXs = siblingCXsByUnion.get(e.sourceId) ?? [tgt!.x + PERSON_W / 2];
       return {
         id: e.id,
         source: e.sourceId,
         target: e.targetId,
         type: "familyEdge",
-        data: { edgeType: "child", strokeColor, isDashed, ...bus },
+        data: { edgeType: "child", strokeColor, isDashed, siblingCXs },
       } satisfies Edge;
     }
 
     // Direct person→person edge (single parent, no union)
+    const childCX = tgt ? tgt.x + PERSON_W / 2 : 0;
     return {
       id: e.id,
       source: e.sourceId,
       target: e.targetId,
       type: "familyEdge",
-      data: { edgeType: "child", strokeColor, isDashed, isBus: false },
+      data: { edgeType: "child", strokeColor, isDashed, siblingCXs: [childCX] },
     } satisfies Edge;
   });
 

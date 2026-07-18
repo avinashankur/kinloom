@@ -14,7 +14,6 @@ import "@xyflow/react/dist/style.css";
 import type { FamilyTreeSnapshot } from "@/entities/family-tree/model/family-tree";
 import { GenealogyLayoutEngine } from "@/infrastructure/layout/genealogy-layout-engine";
 import { projectFamilyGraph } from "../graph/project-family-graph";
-import type { PositionedGraph } from "@/infrastructure/layout/tree-layout-engine";
 import { toReactFlowGraph } from "../graph/to-react-flow-graph";
 import { PersonNode } from "./person-node";
 import { UnionNode } from "./union-node";
@@ -23,6 +22,176 @@ import { TreeControls } from "./tree-controls";
 import { ActivePersonMenu } from "./active-person-menu";
 import { useTreeUIStore } from "@/stores/tree-ui-store";
 import { cn } from "@/lib/utils";
+
+// ── Pure graph helpers (person IDs only) ───────────────────────────────────
+
+/** BFS upward — returns every ancestor person ID, including startId itself. */
+function collectAncestorPersonIds(
+  personId: string,
+  snapshot: FamilyTreeSnapshot,
+): Set<string> {
+  const visited = new Set<string>();
+  const queue = [personId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const parentIds = snapshot.parentChildRelationships
+      .filter((r) => r.childId === current)
+      .map((r) => r.parentId);
+    for (const pid of parentIds) {
+      if (!visited.has(pid)) queue.push(pid);
+    }
+  }
+  return visited;
+}
+
+/** BFS downward — returns every descendant person ID, including startId itself. */
+function collectDescendantPersonIds(
+  startId: string,
+  snapshot: FamilyTreeSnapshot,
+): Set<string> {
+  const visited = new Set<string>();
+  const queue = [startId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const childIds = snapshot.parentChildRelationships
+      .filter((r) => r.parentId === current)
+      .map((r) => r.childId);
+    for (const childId of childIds) {
+      if (!visited.has(childId)) queue.push(childId);
+    }
+  }
+  return visited;
+}
+
+/**
+ * Given the focused person, returns the set of person IDs to REMOVE from
+ * the snapshot before layout.
+ *
+ * keepVisible anchors (never removed):
+ *   • Focused person + all their ancestors
+ *   • Each spouse (visible as bridge)
+ *   • All children shared between (focused ↔ spouse) and their full subtrees
+ *
+ * Hidden = everything reachable from a spouse's exclusive ancestry that is
+ * NOT in keepVisible:  parents, siblings, siblings' spouses/children, etc.
+ * In-laws of siblings are caught by iterative partnership propagation.
+ */
+function computeHiddenPersonIds(
+  activePersonId: string,
+  snapshot: FamilyTreeSnapshot,
+): Set<string> {
+  const spouseIds = snapshot.partnerships
+    .filter(
+      (p) => p.personAId === activePersonId || p.personBId === activePersonId,
+    )
+    .map((p) =>
+      p.personAId === activePersonId ? p.personBId : p.personAId,
+    );
+
+  if (spouseIds.length === 0) return new Set();
+
+  // ── 1. Build keepVisible ──────────────────────────────────────────────────
+  const keepVisible = new Set<string>();
+
+  // Focused person + full ancestry
+  for (const id of collectAncestorPersonIds(activePersonId, snapshot)) {
+    keepVisible.add(id);
+  }
+
+  for (const spouseId of spouseIds) {
+    keepVisible.add(spouseId); // spouse always visible as bridge
+
+    // Shared children (both active and spouse are parents) + their subtrees
+    for (const person of snapshot.people) {
+      const parentIds = snapshot.parentChildRelationships
+        .filter((r) => r.childId === person.id)
+        .map((r) => r.parentId);
+      if (
+        parentIds.includes(activePersonId) &&
+        parentIds.includes(spouseId)
+      ) {
+        keepVisible.add(person.id);
+        for (const d of collectDescendantPersonIds(person.id, snapshot)) {
+          keepVisible.add(d);
+        }
+      }
+    }
+  }
+
+  // ── 2. Collect hidden person IDs ──────────────────────────────────────────
+  const hidden = new Set<string>();
+
+  for (const spouseId of spouseIds) {
+    // Walk up spouse's ancestry; each exclusive ancestor triggers a downward sweep
+    for (const ancId of collectAncestorPersonIds(spouseId, snapshot)) {
+      if (keepVisible.has(ancId)) continue;
+      hidden.add(ancId);
+      // Descend from each hidden ancestor → catches siblings, cousins, etc.
+      for (const d of collectDescendantPersonIds(ancId, snapshot)) {
+        if (!keepVisible.has(d)) hidden.add(d);
+      }
+    }
+  }
+
+  // ── 3. Propagate through partnerships (catches in-laws of siblings) ────────
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const p of snapshot.partnerships) {
+      if (hidden.has(p.personAId) && !keepVisible.has(p.personBId) && !hidden.has(p.personBId)) {
+        hidden.add(p.personBId);
+        for (const d of collectDescendantPersonIds(p.personBId, snapshot)) {
+          if (!keepVisible.has(d)) hidden.add(d);
+        }
+        changed = true;
+      }
+      if (hidden.has(p.personBId) && !keepVisible.has(p.personAId) && !hidden.has(p.personAId)) {
+        hidden.add(p.personAId);
+        for (const d of collectDescendantPersonIds(p.personAId, snapshot)) {
+          if (!keepVisible.has(d)) hidden.add(d);
+        }
+        changed = true;
+      }
+    }
+  }
+
+  return hidden;
+}
+
+/**
+ * Returns a filtered FamilyTreeSnapshot with the hidden people (and their
+ * exclusive relationships) stripped out. The layout engine runs on this
+ * filtered snapshot, producing a compact, gap-free tree.
+ */
+function filterSnapshot(
+  snapshot: FamilyTreeSnapshot,
+  hiddenPersonIds: Set<string>,
+): FamilyTreeSnapshot {
+  if (hiddenPersonIds.size === 0) return snapshot;
+
+  const visibleIds = new Set(
+    snapshot.people.filter((p) => !hiddenPersonIds.has(p.id)).map((p) => p.id),
+  );
+
+  return {
+    ...snapshot,
+    people: snapshot.people.filter((p) => !hiddenPersonIds.has(p.id)),
+    // Keep a partnership only if both partners are visible
+    partnerships: snapshot.partnerships.filter(
+      (p) => visibleIds.has(p.personAId) && visibleIds.has(p.personBId),
+    ),
+    // Keep a parent-child link only if both ends are visible
+    parentChildRelationships: snapshot.parentChildRelationships.filter(
+      (r) => visibleIds.has(r.parentId) && visibleIds.has(r.childId),
+    ),
+  };
+}
+
+// ── React Flow types ────────────────────────────────────────────────────────
 
 const nodeTypes: NodeTypes = {
   personNode: PersonNode as never,
@@ -34,6 +203,8 @@ const edgeTypes: EdgeTypes = {
 };
 
 const layoutEngine = new GenealogyLayoutEngine();
+
+// ── Component ───────────────────────────────────────────────────────────────
 
 interface FamilyTreeCanvasInnerProps {
   snapshot: FamilyTreeSnapshot;
@@ -60,53 +231,70 @@ function FamilyTreeCanvasInner({
 
   const [nodes, setNodes] = useState<ReturnType<typeof toReactFlowGraph>["nodes"]>([]);
   const [edges, setEdges] = useState<ReturnType<typeof toReactFlowGraph>["edges"]>([]);
-  const [positionedGraph, setPositionedGraph] = useState<PositionedGraph | null>(null);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
-  const snapshotRef = useRef<string>("");
 
-  // Run the full graph pipeline ONLY when snapshot structurally changes
+  // ── Persistent focus ─────────────────────────────────────────────────────
+  // When nobody is focused, fall back to the last focused person so the
+  // hiding state never collapses back to "show everything".
+  const [lastActivePersonId, setLastActivePersonId] = useState<string | null>(null);
   useEffect(() => {
-    const key = JSON.stringify({
+    if (activePersonId) setLastActivePersonId(activePersonId);
+  }, [activePersonId]);
+
+  const effectivePersonId = activePersonId ?? lastActivePersonId;
+
+  // ── Unified layout effect ─────────────────────────────────────────────────
+  // Runs when snapshot structure changes OR the effective focused person changes.
+  // Structural changes: show spinner + fit view.
+  // Focus-only changes: silent re-layout, keep current viewport.
+  const prevStructKeyRef = useRef<string>("");
+  const prevEffectivePersonRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const structKey = JSON.stringify({
       people: snapshot.people.map((p) => p.id),
       partnerships: snapshot.partnerships.map((p) => p.id),
       rels: snapshot.parentChildRelationships.map((r) => r.id),
     });
 
-    if (key === snapshotRef.current) return; // No structural change
-    snapshotRef.current = key;
+    const isStructural = structKey !== prevStructKeyRef.current;
+    const isFocusChange = effectivePersonId !== prevEffectivePersonRef.current;
 
-    setIsLayoutReady(false);
+    if (!isStructural && !isFocusChange) return;
 
-    const layoutGraph = projectFamilyGraph(snapshot);
+    prevStructKeyRef.current = structKey;
+    prevEffectivePersonRef.current = effectivePersonId;
+
+    // Show spinner only for structural changes (adding/removing people)
+    if (isStructural) setIsLayoutReady(false);
+
+    const hiddenPersonIds = effectivePersonId
+      ? computeHiddenPersonIds(effectivePersonId, snapshot)
+      : new Set<string>();
+
+    // Filter the snapshot — the layout engine sees only what should be visible
+    const displaySnapshot = filterSnapshot(snapshot, hiddenPersonIds);
+    const layoutGraph = projectFamilyGraph(displaySnapshot);
+
     layoutEngine.layout(layoutGraph).then((positioned) => {
-      setPositionedGraph(positioned);
-      setIsLayoutReady(true);
-    });
-  }, [snapshot]);
-
-  // Update React Flow nodes/edges on ANY snapshot change or layout change
-  useEffect(() => {
-    if (positionedGraph) {
       const { nodes: rfNodes, edges: rfEdges } = toReactFlowGraph(
-        positionedGraph,
-        snapshot,
+        positioned,
+        displaySnapshot,
       );
       setNodes(rfNodes);
       setEdges(rfEdges);
-    }
-  }, [positionedGraph, snapshot]);
+      setIsLayoutReady(true);
 
-  // Fit view after initial layout
-  useEffect(() => {
-    if (isLayoutReady) {
-      setTimeout(() => fitView({ duration: 600, padding: 0.15 }), 50);
-    }
-  }, [isLayoutReady, fitView]);
+      // Fit the viewport only after a structural change, not focus switches
+      if (isStructural) {
+        setTimeout(() => fitView({ duration: 600, padding: 0.15 }), 50);
+      }
+    });
+  }, [snapshot, effectivePersonId, fitView]);
 
-  // Keyboard Shortcuts
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore shortcuts if the user is typing in an input field (like a dialog)
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -119,7 +307,6 @@ function FamilyTreeCanvasInner({
 
       const { activePersonId, setActivePerson } = useTreeUIStore.getState();
 
-      // Canvas / global shortcuts
       if (e.key === "=" || e.key === "+") {
         e.preventDefault();
         zoomIn({ duration: 200 });
@@ -131,7 +318,6 @@ function FamilyTreeCanvasInner({
         fitView({ duration: 600, padding: 0.15 });
       }
 
-      // Active person shortcuts
       if (activePersonId) {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -156,7 +342,7 @@ function FamilyTreeCanvasInner({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onEdit, onAddRelationship, onDelete, fitView, zoomIn, zoomOut]);
 
-  // Center viewport on active person without reconstructing layout
+  // ── Center viewport on newly focused person ───────────────────────────────
   const prevActivePersonId = useRef<string | null>(null);
   useEffect(() => {
     if (
@@ -175,6 +361,7 @@ function FamilyTreeCanvasInner({
     prevActivePersonId.current = activePersonId;
   }, [activePersonId, nodes, isLayoutReady, setCenter]);
 
+  // ── Click handlers ────────────────────────────────────────────────────────
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "personNode") {
@@ -194,9 +381,7 @@ function FamilyTreeCanvasInner({
     [snapshot.people, activePersonId],
   );
 
-  // Pass nodes as-is — active state is handled inside PersonNode via the store
-  const enrichedNodes = nodes;
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
       className={cn(
@@ -205,7 +390,7 @@ function FamilyTreeCanvasInner({
       )}
     >
       <ReactFlow
-        nodes={enrichedNodes}
+        nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -237,7 +422,6 @@ function FamilyTreeCanvasInner({
           className="absolute z-20 pointer-events-none"
           style={{ inset: 0 }}
         >
-          {/* We position relative to the canvas — use floating menu at top */}
           <div className="pointer-events-auto absolute top-4 left-1/2 -translate-x-1/2">
             <ActivePersonMenu
               personId={activePersonId}
